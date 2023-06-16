@@ -1,0 +1,55 @@
+Explore more ansible-builder command line
+In the upcoming challenges, we'll prepare a custom execution environment with the servicenow.itsm collection.
+
+This system already has the ansible-builder CLI tool installed from the Ansible Automation Platform 2 installer. You can directly start playing with the command-line as below:
+
+Explore the ansible-builder command line
+1. Access the command line help
+ansible-builder --help
+The ansible-builder --help output shows subcommands available to us. Let's explore the build and createsubcommands in more detail.
+
+2. Explore the build subcommand.
+ansible-builder build --help
+The build subcommand builds execution environments based on definition file. It populates the build context and then invokes podman or docker to create the execution environment image.
+
+3. Explore the create subcommand.
+ansible-builder create --help
+The create subcommand works similarly to the build command in that it takes a definition file and creates the build context. The create subcommand, however, will not build the execution environment image.
+
+This is useful for creating just the build context and a Containerfile that can then be shared.
+
+----------------------
+
+Populate the ansible-builder spec file and create a custom executversionidjdion environment
+Create execution-environment.yml file
+1. Create a project_directory where all the files required to build an execution environment will live
+mkdir project_directory && cd project_directory
+2. Populate the file execution-environment.yml file with following contents(You can copy paste the below command directly)
+cat <<EOT >> execution-environment.yml
+---
+version: 1
+dependencies:
+  galaxy: requirements.yml
+EOT
+3. Create a new file called requirements.yml and add the following contents:
+cat <<EOT >> requirements.yml
+---
+collections:
+  - name: servicenow.itsm
+EOT
+4. Open both the files and check their contents
+cat execution-environment.yml
+cat requirements.yml
+5. Through the spec file(execution-environment.yml) and requirements.yml file we ensure that ansible-builder will download the servicenow.itsm collection while building the execution environment.
+The default collection download location is from galaxy.ansible.com
+You can specify an ansible config in spec file to point to Automation Hub or your own Hub instance.
+More than one collections can also be specified in the requirements.yml file
+6. Build the execution environment using the above created files.
+Run the below ansible-builder command to create a new execution environment called custom-ee
+
+ansible-builder build -v3 -t custom-ee
+v3 - is to add verbosity to the cli run, for the user to check what is happening with each build of execution environment
+-t custom-ee - will tag your image name as custom-ee The build takes around 2-4 minutes, please check the command logs to see what's happening behind the scenes meanwhile.
+7. Please use the below command to check the image list via podman
+podman images
+You can see the newly created custom-ee in the list of podman images.
