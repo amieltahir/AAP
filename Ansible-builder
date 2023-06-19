@@ -53,3 +53,115 @@ v3 - is to add verbosity to the cli run, for the user to check what is happening
 7. Please use the below command to check the image list via podman
 podman images
 You can see the newly created custom-ee in the list of podman images.
+
+podman images
+
+------
+
+Understanding entries in definition schema and building a complex execution environment
+In this challenge we will create a similar execution environment as in the previous exercise, but we will also add more dependency information and extra build steps to explain what you can achieve with ansible-builder Change the directory again to project_directory
+
+cd project_directory
+Edit the execution-environment.yml file
+1. Edit the file execution-environment.yml file with following contents(You can copy paste the below command directly)
+In this file we are adding extra dependency information, we are adding a python requirements.txt file which will hold the pip dependencies needed for the content to run, and a bindep.txt, which will hold the rpm installs required. We are not adding any EE_BASE_IMAGE and EE_BUILDER_IMAGE tags and using the default ones used by ansible-builder, which comes as part of AAP 2 install. Check the output of podman images command to see these images.
+
+cat <<EOT >> execution-environment.yml
+---
+version: 1
+dependencies:
+  galaxy: requirements.yml
+  python: requirements.txt
+  system: bindep.txt
+additional_build_steps:
+  prepend: |
+    RUN whoami
+    RUN cat /etc/os-release
+  append:
+    - RUN echo This is a post-install command!
+    - RUN ls -la /etc
+EOT
+2. Create a new file called requirements.yml and add the following contents:
+We are adding a new collection called ansible.utils in addition to the servicenow.itsm collection. Both of these collections have their own dependency information as specified in their individual requirements.txt, for example: here Similarly, ansible.utils has its own requirements.txt and bindep.txt present.
+
+cat <<EOT >> requirements.yml
+---
+
+collections:
+
+  - name: servicenow.itsm
+  - name: ansible.utils
+EOT
+3. Create a new file called requirements.txt, this file contains the python requirements you want installed via pip, these are different from the requirements present in individual collections that you install through requirements.yml.
+
+cat <<EOT >> requirements.txt
+gcp-cli
+ncclient
+netaddr
+paramiko
+EOT
+4. Create a new file called bindep.txt, this file contains the rpm requirements you want installed via dnf, these are different from the bindep requirements present in individual collections that you install through requirements.yml.
+
+cat <<EOT >> bindep.txt
+findutils [compile platform:centos-8 platform:rhel-8]
+gcc [compile platform:centos-8 platform:rhel-8]
+make [compile platform:centos-8 platform:rhel-8]
+python38-devel [compile platform:centos-8 platform:rhel-8]
+python38-cffi [platform:centos-8 platform:rhel-8]
+python38-cryptography [platform:centos-8 platform:rhel-8]
+python38-pycparser [platform:centos-8 platform:rhel-8]
+EOT
+5. Through the spec file(execution-environment.yml) and requirements.yml file we ensure that ansible-builder will download the servicenow.itsm and ansible.utils collections while building the execution environment.
+More than one collections can also be specified in the requirements.yml file
+The prepend and append steps will be executed after the collections are downloaded in to the container image
+6. Build the execution environment using the above created files.
+Run the below ansible-builder command to create a new execution environment called custom-ee
+
+
+ansible-builder build -v3 -t custom-ee
+v3 - is to add verbosity to the cli run, for the user to check what is happening with each build of execution environment
+-t custom-ee - will tag your image name as custom-ee The build takes around 3-5 mins, please check the command logs to see what's happening meanwhile
+7. Please use the below command to check the image list via podman
+
+podman images
+You can see the newly created custom-ee in the list of podman images.
+
+8. Please check the context dir and take a look at the Containerfile. Containerfile is the direct reflection of the steps that were taken to build the execution environment, you can directly transfer the context directory to a different server and replicate the image creation via docker/podman build commands.
+
+cat context/Containerfile
+In the next challenge we will push the execution environment to private automation hub.
+
+-------
+
+Push custom execution environment to private automation hub
+In this challenge we will push the custom automation execution environment to private automation hub.
+
+automationhub-web tab is open and you will see a login screen when you click on the tab, use the below credentials to login as the curator user in private automation hub
+🔐 Login credentials
+
+User: admin
+
+Password: ansible123!
+
+Login to private automation hub registry through podman
+1. On the terminal tab, use the podman login command to login to private automation hub registry, use the same credentials as provided above
+podman login privatehub-01.$INSTRUQT_PARTICIPANT_ID.instruqt.io
+2. Tag the custom-ee as an execution environment to be pushed to private automation hub
+Run the following command
+
+podman tag localhost/custom-ee privatehub-01.$INSTRUQT_PARTICIPANT_ID.instruqt.io/custom-ee
+3. Push the custom-ee to private automation hub.
+Run the following command
+
+podman push privatehub-01.$INSTRUQT_PARTICIPANT_ID.instruqt.io/custom-ee
+4. Check if the custom-ee is pushed to private automation hub.
+Go to automationhub-web tab and login using the below credentials 🔐 Login credentials
+User: admin
+
+Password: ansible123!
+
+Once logged in, go to Execution Environment in the left pane and check if custom-ee is pushed to the list. Any user in your organization can download this custom execution environment for their Ansible automation content development or you can start using private automation hub as the default registry for your automation controller as well.
+
+This concludes the ansible-builder execution environment challenges, Happy hacking!!
+
+
